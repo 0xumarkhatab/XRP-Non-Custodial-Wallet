@@ -27,7 +27,9 @@ import Head from "next/head";
 import { parseEther } from "ethers/lib/utils";
 import axios from "axios";
 import { Alchemy, Network } from "alchemy-sdk";
+import TransactionInstance from "./TransactionInstance";
 import AssetInstance from "./AssetInstance";
+import AssetTemplate from "./AssetTemplate";
 async function getTransactions(network, address, setter) {
   const config = alchemyApps[network];
   console.log({ config });
@@ -46,10 +48,73 @@ async function getTransactions(network, address, setter) {
   let arr = [...to_trxs.transfers];
   arr.concat({ ...from_trxs.transfers });
   if (setter) setter(arr);
-  console.log("transactions are ", arr);
+  // console.log("transactions are ", arr);
 
   return arr;
 }
+
+let tokens = {
+  mainnet: [
+    {
+      name: "USDT",
+      address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    },
+    {
+      name: "BNB",
+      address: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+    },
+    {
+      name: "USDC",
+      address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    },
+    {
+      name: "BUSD",
+      address: "0x4Fabb145d64652a948d72533023f6E7A623C7C53",
+    },
+
+    {
+      name: "MATIC",
+      address: "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0",
+    },
+
+    {
+      name: "OKB",
+      address: "0x75231F58b43240C9718Dd58B4967c5114342a86c",
+    },
+
+    {
+      name: "stETH",
+      address: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    },
+    {
+      name: "anyLTC",
+      address: "0x0aBCFbfA8e3Fda8B7FBA18721Caf7d5cf55cF5f5",
+    },
+    {
+      name: "SHIB",
+      address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+    },
+    {
+      name: "THETA",
+      address: "0x3883f5e181fccaF8410FA61e12b59BAd963fb645",
+    },
+  ],
+  goerli: [
+    {
+      name: "WETH",
+      address: "0x695364ffAA20F205e337f9e6226e5e22525838d9",
+    },
+    {
+      name: "WBTC",
+      address: "0xD8c4F6e84D6f6A0D39d25a3F42F15351303a6Af5",
+    },
+    {
+      name: "USDC",
+      address: "0x8C1170519FE80dc2d56eB95B073D5C3203208985",
+    },
+  ],
+};
+
 let alchemyApps = {
   goerli: {
     apiKey: "OINpsQZSN0z6VRLC1jL5YYrLmQiYGARE",
@@ -139,6 +204,12 @@ function AccountManager({ mnemonic }) {
 
   async function checkBalance(address) {
     if (!address) return 0;
+    if (!web3 || !web3.current) {
+      let websocketUrl = providers[selectedChain];
+      let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
+      let _web3 = new Web3(_provider);
+      web3.current = _web3;
+    }
     let balance = await web3.current?.eth.getBalance(address);
     if (balance == undefined) return 0;
     console.log("balance directly from blockchain", balance);
@@ -159,7 +230,7 @@ function AccountManager({ mnemonic }) {
     }).join("");
   }
   const generateAccounts = async (_seedPhrase) => {
-    console.log("generating accounts");
+    // console.log("generating accounts");
     const seed = bip39.mnemonicToSeedSync(_seedPhrase);
     const hdwallet = hdkey.fromMasterSeed(seed);
     const wallet_hdpath = "m/44'/60'/0'/0/";
@@ -179,7 +250,7 @@ function AccountManager({ mnemonic }) {
       };
       _accounts.push(_accountsObject);
     }
-    console.log("setting first account");
+    // console.log("setting first account");
 
     setSelectedAccount(_accounts[0]);
 
@@ -188,11 +259,11 @@ function AccountManager({ mnemonic }) {
   };
 
   async function updateAssets() {
-    console.log("entring ");
+    // console.log("entring ");
     if (!selectedAccount || !selectedChain) {
       return 0;
     }
-    console.log("inside");
+    // console.log("inside");
     loadingMessage == null && setLoadingMessage("Loading");
     websocketUrl = providers[selectedChain];
     _provider = new Web3.providers.WebsocketProvider(websocketUrl);
@@ -298,6 +369,12 @@ function AccountManager({ mnemonic }) {
     if (!selectedAccount || !selectedAccount.address) return;
     getTransactions(selectedChain, selectedAccount.address, setTransactions);
   }, [selectedAccount]);
+  // console.log({
+  //   tokens: tokens[selectedChain],
+  //   selectedAccount,
+  //   web3,
+  //   web3Current: web3.current,
+  // });
 
   return (
     <VStack spacing={5}>
@@ -610,6 +687,28 @@ function AccountManager({ mnemonic }) {
               <TabPanels>
                 <TabPanel>
                   <Heading>Your Assets</Heading>
+                  <VStack pt={"5vh"} spacing={10}>
+                    {selectedChain != null &&
+                      tokens[selectedChain]?.map((item) => {
+                        return (
+                          <AssetTemplate
+                            asset={item}
+                            providerUrl={providers[selectedChain]}
+                            userAddress={
+                              selectedAccount ? selectedAccount.address : null
+                            }
+                          />
+                          // <AssetInstance
+                          //   key={item.name}
+                          //   smartContract={item}
+                          //   providerUrl={providers[selectedChain]}
+                          //   userAddress={
+                          //     selectedAccount ? selectedAccount.address : null
+                          //   }
+                          // />
+                        );
+                      })}
+                  </VStack>
                 </TabPanel>
                 <TabPanel>
                   <VStack spacing={10}>
@@ -622,7 +721,12 @@ function AccountManager({ mnemonic }) {
                       <>
                         <VStack spacing={5}>
                           {transactions.map((asset) => {
-                            return <AssetInstance asset={asset} />;
+                            return (
+                              <TransactionInstance
+                                key={asset.asset}
+                                asset={asset}
+                              />
+                            );
                           })}
                         </VStack>
                       </>

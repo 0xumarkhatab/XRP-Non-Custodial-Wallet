@@ -1,7 +1,57 @@
-import { Box, Button, HStack, Img, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { getMinimalAddress } from "./AccountInstance";
 import Web3 from "web3";
+function AssetTemplate(props) {
+  //   console.log("asset is", props);
+  let userAddress = props?.userAddress;
+  let assetName = props?.asset.name;
+  let smartContractAddress = props?.asset?.address;
+  let websocketUrl = props?.providerUrl;
+  let _provider = websocketUrl
+    ? new Web3.providers.WebsocketProvider(websocketUrl)
+    : null;
+  let web3 = _provider ? new Web3(_provider) : null;
+
+  const [balance, setBalance] = useState("fetching Balance");
+
+  if (!props.asset || !web3) {
+    return <></>;
+  }
+
+  async function getBalance() {
+    if (!userAddress) return;
+    var contract = new web3.eth.Contract(ERC20ABI, smartContractAddress);
+    let _bal = await contract.methods.balanceOf(userAddress).call();
+    _bal = parseInt((parseInt(_bal) / 10) ^ 18);
+    setBalance(_bal);
+  }
+  useEffect(() => {
+    getBalance();
+  }, []);
+
+  return (
+    <HStack
+      key={assetName}
+      width={"40vw"}
+      borderRadius={"20px"}
+      bg={"white"}
+      color={"black"}
+      spacing={10}
+      padding={"15px"}
+      justify={"space-between"}
+    >
+      <Box bg={"black"} color={"white"} borderRadius={"50%"} padding={"10px"}>
+        {assetName}
+      </Box>
+
+      <Text>{balance}</Text>
+
+      <Button colorScheme={"cyan"}>View Details</Button>
+    </HStack>
+  );
+}
+
+export default AssetTemplate;
 let ERC20ABI = [
   {
     inputs: [
@@ -290,66 +340,3 @@ let ERC20ABI = [
     type: "function",
   },
 ];
-
-async function AssetInstance(props) {
-  console.log("asset is ", props);
-  let userAddress = props?.userAddress;
-
-  let smartContractAddress = props?.smartContract?.address;
-  let websocketUrl = props?.providerUrl;
-  let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
-  let web3 = new Web3(_provider);
-
-  if (!userAddress || !web3 || !smartContractAddress) return <h1>hi</h1>;
-  else {
-    console.log("rendering...");
-  }
-
-  const [name, setName] = useState("fetching..");
-  const [balance, setBalance] = useState("fetching..");
-
-  async function getBalance() {
-    if (!userAddress) return;
-    var contract = new web3.eth.Contract(ERC20ABI, smartContractAddress);
-    let _bal = await contract.methods.balanceOf(userAddress);
-    _bal = parseInt(_bal);
-    console.log("balance is ", _bal);
-    // setBalance(_bal);
-    let _name = await contract.methods.name().call();
-    console.log({ _name, _bal });
-    // setName(_name);
-  }
-  useEffect(() => {
-    // getBalance();
-  }, []);
-
-  // console.log({
-  //   name,
-  //   balance,
-  // });
-
-  return (
-    <h1>hi</h1>
-    // <HStack
-    //   key={userAddress.toString() + smartContractAddress.toString()}
-    //   width={"40vw"}
-    //   borderRadius={"20px"}
-    //   bg={"white"}
-    //   color={"black"}
-    //   spacing={10}
-    //   padding={"10px"}
-    // >
-    //   hi
-    //   {/* <Box bg={"black"} color={"white"} borderRadius={"50%"} padding={"10px"}>
-    //     name
-    //   </Box>
-
-    //   <Text textDecoration={"underline"}>0</Text>
-
-    //   <Button colorScheme={"cyan"}>View Details</Button>
-    //    */}
-    // </HStack>
-  );
-}
-
-export default AssetInstance;
