@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
-import AccountInstance from "./AccountInstance";
+import AccountInstance, { getMinimalAddress } from "./AccountInstance";
 import Web3 from "web3";
 import * as bip39 from "@scure/bip39";
 import { hdkey } from "ethereumjs-wallet";
@@ -25,7 +25,42 @@ import ModalWrapper from "./ModalWrapper";
 import PaymentMethodInstance from "./PaymentMethodInstance";
 import Head from "next/head";
 import { parseEther } from "ethers/lib/utils";
+import axios from "axios";
+import { Alchemy, Network } from "alchemy-sdk";
+import AssetInstance from "./AssetInstance";
+async function getTransactions(network, address, setter) {
+  const config = alchemyApps[network];
+  console.log({ config });
+  const alchemy = new Alchemy(config);
 
+  const to_trxs = await alchemy.core.getAssetTransfers({
+    fromBlock: "0x0",
+    toAddress: address,
+    category: ["external", "internal", "erc20", "erc721", "erc1155"],
+  });
+  const from_trxs = await alchemy.core.getAssetTransfers({
+    fromBlock: "0x0",
+    fromAddress: address,
+    category: ["external", "internal", "erc20", "erc721", "erc1155"],
+  });
+  let arr = [...to_trxs.transfers];
+  arr.concat({ ...from_trxs.transfers });
+  if (setter) setter(arr);
+  console.log("transactions are ", arr);
+
+  return arr;
+}
+let alchemyApps = {
+  goerli: {
+    apiKey: "OINpsQZSN0z6VRLC1jL5YYrLmQiYGARE",
+    network: Network.ETH_GOERLI,
+  },
+
+  mainnet: {
+    apiKey: "Ye6S888IuNTfAGGPQf2C_ZRvXJD9YQdQ",
+    network: Network.ETH_MAINNET,
+  },
+};
 let chains = [
   {
     name: "mainnet",
@@ -35,48 +70,15 @@ let chains = [
     name: "goerli",
     chain_id: 5,
   },
-
-  {
-    name: "sepolia",
-    chain_id: 11155111,
-  },
 ];
-
-// let accounts = [
-//   {
-//     name: "Account 1",
-//     address: "0x14hjvy455as4uasdasd4as65d4as65d4a6sdas45d6as5d4",
-//     balance: 15,
-//     avatar: "./account.png",
-//   },
-//   {
-//     name: "Account 2",
-//     address: "0x18khdy455as4uasdasd4as65d4as65d4a6sdas45d6as5d4",
-//     balance: 10,
-//     avatar: "./account.png",
-//   },
-//   {
-//     name: "Account 3",
-//     address: "0x13vy455as4uasdasd4as65d4as65d4a6sdas45d6as5d4",
-//     balance: 7.92,
-//     avatar: "./account.png",
-//   },
-//   {
-//     name: "Account 4",
-//     address: "0x19ivt4y55as4uasdasd4as65d4as65d4a6sdas45d6as5d4",
-//     balance: 2.5,
-//     avatar: "./account.png",
-//   },
-// ];
 
 let providers = {
   goerli: "wss://goerli.infura.io/ws/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
-  sepolia: "wss://sepolia.infura.io/ws/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
   mainnet: "wss://mainnet.infura.io/ws/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
 };
 
 let Assets = [];
-("  Deposit ETH To interact with decentralized applications using MetaMask, you’ll need ETH in your wallet.");
+
 let buyMethods = [
   {
     title: "Coinbase Pay",
@@ -104,6 +106,10 @@ let buyMethods = [
     logo: `https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_e97458783e493c9b8e5e8da0aaa92dfd/wyre.png`,
   },
 ];
+let currencyOf = {
+  goerli: "ETH",
+  mainnet: "ETH",
+};
 let websocketUrl = providers[chains[0].name];
 let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
 let _web3 = new Web3(_provider);
@@ -119,7 +125,10 @@ function AccountManager({ mnemonic }) {
   const [sellIntent, setSellIntent] = useState(false);
   const [transferAmount, setTransferAmount] = useState(0);
   const [transferAddress, setTransferAddress] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(null);
+  const [transactionObject, setTransactionObject] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+
   const web3 = useRef(null);
 
   function capitalize(str) {
@@ -131,10 +140,16 @@ function AccountManager({ mnemonic }) {
   async function checkBalance(address) {
     if (!address) return 0;
     let balance = await web3.current?.eth.getBalance(address);
+    if (balance == undefined) return 0;
+    console.log("balance directly from blockchain", balance);
+
     balance = parseFloat(parseInt(balance) / 10 ** 18).toFixed(4);
+
     if (balance.toString() === "0.0000") {
       balance = 0;
     }
+    console.log({ address, balance });
+
     return balance;
   }
 
@@ -144,48 +159,133 @@ function AccountManager({ mnemonic }) {
     }).join("");
   }
   const generateAccounts = async (_seedPhrase) => {
+    console.log("generating accounts");
     const seed = bip39.mnemonicToSeedSync(_seedPhrase);
     const hdwallet = hdkey.fromMasterSeed(seed);
     const wallet_hdpath = "m/44'/60'/0'/0/";
     let _accounts = [];
     for (let i = 0; i < 3; i++) {
       const wallet = hdwallet.derivePath(wallet_hdpath + i).getWallet();
-      const address = "0x" + wallet.getAddress().toString("hex");
+      const _address = "0x" + wallet.getAddress().toString("hex");
       let privKey = arrayToPrivateKey(wallet.getPrivateKey());
-      let balance = await checkBalance(address);
+      let balance = await checkBalance(_address);
       let _accountsObject = {
         name: "Account " + (i + 1),
         avatar:
           "https://user-images.githubusercontent.com/17594777/87848893-9bc99700-c8e4-11ea-992d-8980cf562b1b.png",
         balance,
-        address,
+        address: _address,
         privateKey: privKey,
       };
       _accounts.push(_accountsObject);
     }
-    setAccounts(_accounts);
+    console.log("setting first account");
+
     setSelectedAccount(_accounts[0]);
+
+    setAccounts(_accounts);
     return _accounts;
   };
 
   async function updateAssets() {
-    if (!selectedAccount | !selectedChain) {
+    console.log("entring ");
+    if (!selectedAccount || !selectedChain) {
       return 0;
     }
-    !loading && setLoading(true);
+    console.log("inside");
+    loadingMessage == null && setLoadingMessage("Loading");
     websocketUrl = providers[selectedChain];
     _provider = new Web3.providers.WebsocketProvider(websocketUrl);
     _web3 = new Web3(_provider);
     web3.current = _web3;
+    // fetching latest transactions of selected account
+    let trxs = await getTransactions(
+      selectedChain,
+      selectedAccount.address,
+      setTransactions
+    );
 
-    let _assets = [...Assets]; // get assets here
+    // fetching balance of the user
     let balance = await checkBalance(selectedAccount.address);
     setSelectedAccount({ ...selectedAccount, balance });
 
     setTimeout(() => {
-      setLoading(false);
-    }, 2000);
+      setLoadingMessage(null);
+    }, 1000);
   }
+
+  async function prepareTransaction(value, toAddress) {
+    const gasPrice = await web3.current.eth.getGasPrice();
+    const gasLimit = 21000;
+
+    const rawTransaction = {
+      gasPrice: gasPrice,
+      gasLimit: gasLimit,
+      to: toAddress,
+      value: value,
+    };
+    setTransactionObject(rawTransaction);
+    return rawTransaction;
+  }
+  async function transferMoney() {
+    await prepareTransaction(
+      parseEther(transferAmount.toString()),
+      transferAddress
+    );
+  }
+  async function signTransaction() {
+    await _signTransaction(selectedAccount.privateKey);
+  }
+  async function _signTransaction(privKey) {
+    const signedTransaction = await web3.current.eth.accounts.signTransaction(
+      transactionObject,
+      privKey
+    );
+    setTransactionObject(signedTransaction);
+    broadcastTransaction(signedTransaction);
+    return signedTransaction;
+  }
+
+  // Function to broadcast the signed transaction
+  async function broadcastTransaction(signedTransaction) {
+    setLoadingMessage("Transaction Initiated...");
+    web3.current.eth
+      .sendSignedTransaction(signedTransaction.rawTransaction)
+      .once("transactionHash", (txHash) => {
+        console.log(txHash);
+        setLoadingMessage(
+          `Transaction broadcasted\nWating for confirmation...`
+        );
+      })
+      .on("confirmation", (confirmationNumber, receipt) => {
+        setLoadingMessage(
+          `Transaction confirmed by ${confirmationNumber}/12 block(s)`
+        );
+
+        if (confirmationNumber == 12) {
+          setLoadingMessage(
+            `Funds transferred successfully, block number: ${receipt.blockNumber}`
+          );
+
+          setTimeout(() => {
+            setLoadingMessage(null);
+            setTransactionObject(null);
+            setSellIntent(false);
+          }, 1000);
+          updateAssets();
+          console.log(
+            `Funds transferred successfully, block number: ${receipt.blockNumber}`
+          );
+        } else {
+          return;
+        }
+      })
+      .on("error", (error) => {
+        setLoadingMessage(`Transaction failed: ${error}`);
+      });
+  }
+
+  // use Effects
   useEffect(() => {
     updateAssets();
   }, [selectedChain]);
@@ -194,29 +294,10 @@ function AccountManager({ mnemonic }) {
     generateAccounts(mnemonic);
   }, []);
 
-  async function prepareTransaction(value, toAddress) {
-    const nonce = await web3.eth.getTransactionCount(account);
-    const gasPrice = await web3.eth.getGasPrice();
-    const gasLimit = 21000;
-
-    const rawTransaction = {
-      nonce: nonce,
-      gasPrice: gasPrice,
-      gasLimit: gasLimit,
-      to: toAddress,
-      value: value,
-      data: "",
-    };
-
-    return rawTransaction;
-  }
-  async function transferMoney() {
-    let trx = await prepareTransaction(
-      parseEther(transferAmount.toString()),
-      transferAddress
-    );
-    console.log("trx is ", trx);
-  }
+  useEffect(() => {
+    if (!selectedAccount || !selectedAccount.address) return;
+    getTransactions(selectedChain, selectedAccount.address, setTransactions);
+  }, [selectedAccount]);
 
   return (
     <VStack spacing={5}>
@@ -286,7 +367,7 @@ function AccountManager({ mnemonic }) {
                     height={"75vh"}
                     position={"absolute"}
                     zIndex={2}
-                    bg={"rgba(255,255,255,0.95)"}
+                    bg={"white"}
                     width={"40vw"}
                     borderRadius={"20px"}
                     paddingTop={"5vh"}
@@ -296,14 +377,14 @@ function AccountManager({ mnemonic }) {
                         <AccountInstance
                           selector={async (account) => {
                             setShowAccounts(false);
-                            setLoading(true);
+                            setLoadingMessage("Loading...");
                             let balance = await checkBalance(account.address);
                             setSelectedAccount({ ...account, balance });
                             setTimeout(() => {
-                              setLoading(false);
+                              setLoadingMessage(null);
                             }, 2000);
                           }}
-                          copyable={true}
+                          copyable={false}
                           account={account}
                         />
                       );
@@ -323,9 +404,9 @@ function AccountManager({ mnemonic }) {
         <hr style={{ content: "", width: "20vw" }} />
       </>
 
-      {loading ? (
+      {loadingMessage != null ? (
         <VStack align={"center"} width={"100%"} height={"100%"}>
-          <Heading>Loading....</Heading>
+          <Heading>{loadingMessage}</Heading>
         </VStack>
       ) : (
         <>
@@ -346,10 +427,13 @@ function AccountManager({ mnemonic }) {
               <Text> {isConnected ? "Connected" : "Connect Now"}</Text>
             </HStack>
             <AccountInstance
-              selector={() => {}}
+              selector={() => {
+                console.log("selecting account !");
+              }}
               size={"sm"}
               hover_bg={"rgba(255,255,255,0.4)"}
               color={"white"}
+              copyable={true}
               account={selectedAccount}
             />
             <Button
@@ -418,9 +502,9 @@ function AccountManager({ mnemonic }) {
                   setSellIntent(true);
                 }}
               >
-                Sell
+                Send
               </Button>
-              {sellIntent && (
+              {sellIntent && transactionObject == null && (
                 <ModalWrapper>
                   <VStack
                     height={"75vh"}
@@ -467,8 +551,86 @@ function AccountManager({ mnemonic }) {
                   </VStack>
                 </ModalWrapper>
               )}
+              {transactionObject && (
+                <ModalWrapper>
+                  <VStack
+                    height={"75vh"}
+                    position={"absolute"}
+                    zIndex={2}
+                    bg={"white"}
+                    color={"black"}
+                    width={"40vw"}
+                    borderRadius={"20px"}
+                    paddingTop={"5vh"}
+                    overflowY={"scroll"}
+                    spacing={10}
+                    padding={"20px"}
+                  >
+                    <Heading>Approve Transfer</Heading>
+                    <HStack>
+                      <Text> From : </Text>
+                      <Text>{getMinimalAddress(selectedAccount.address)}</Text>
+                    </HStack>
+                    <HStack>
+                      <Text> To : </Text>
+                      <Text>{getMinimalAddress(transferAddress)}</Text>
+                    </HStack>
+                    <HStack>
+                      <Text> Amount : </Text>
+                      <Text>
+                        {transferAmount} {currencyOf[selectedChain]}
+                      </Text>
+                    </HStack>
+
+                    <HStack spacing={10}>
+                      <Button
+                        colorScheme={"red"}
+                        onClick={() => {
+                          setTransactionObject(null);
+                        }}
+                      >
+                        Reject
+                      </Button>
+                      <Button colorScheme={"blue"} onClick={signTransaction}>
+                        Accept
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </ModalWrapper>
+              )}
+
               <Button colorScheme={"blue"}>Swap</Button>
             </HStack>
+            <Tabs>
+              <TabList width={"40vw"} justifyContent={"space-between"}>
+                <Tab>Assets</Tab>
+                <Tab>Transactions</Tab>
+              </TabList>
+
+              <TabPanels>
+                <TabPanel>
+                  <Heading>Your Assets</Heading>
+                </TabPanel>
+                <TabPanel>
+                  <VStack spacing={10}>
+                    <Heading>Recent Transactions</Heading>
+                    {transactions.length == 0 ? (
+                      <>
+                        <Text>No Recent Transactions</Text>
+                      </>
+                    ) : (
+                      <>
+                        <VStack spacing={5}>
+                          {transactions.map((asset) => {
+                            return <AssetInstance asset={asset} />;
+                          })}
+                        </VStack>
+                      </>
+                    )}
+                  </VStack>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
           </VStack>
         </>
       )}

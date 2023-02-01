@@ -9,12 +9,7 @@ function Main() {
   const [mnemonic, setMnemonic] = useState(null);
   //   mnemonic = localStorage.getItem("mnemonic");
   useEffect(() => {
-    let cachedPassword = localStorage.getItem("password");
     let _mnemonic = localStorage.getItem("mnemonic");
-    console.log("mnemoninc is ", _mnemonic);
-
-    console.log({ cachedPassword, _mnemonic });
-    if (cachedPassword && cachedPassword !== "null") setUnlocked(true);
     if (_mnemonic && _mnemonic !== "null") {
       console.log("mnemonic", _mnemonic);
       setMnemonic(_mnemonic);
@@ -31,6 +26,11 @@ function Main() {
         padding={"20px"}
         borderRadius={"20px"}
         overflowY={"scroll"}
+        sx={{
+          "::-webkit-scrollbar": {
+            display: "none",
+          },
+        }}
       >
         {!mnemonic ? (
           <SeedPhraseManager />

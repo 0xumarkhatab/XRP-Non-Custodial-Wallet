@@ -1,4 +1,4 @@
-import { Box, Button, Img, Input, VStack } from "@chakra-ui/react";
+import { Box, Button, Heading, Img, Input, VStack } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 
 function Unlock({ unlocker }) {
@@ -15,6 +15,7 @@ function Unlock({ unlocker }) {
   }
   useEffect(() => {
     let _pass = localStorage.getItem("password");
+    console.log("original password is ", { _pass });
     if (!_pass || _pass == "null") {
       setOriginalPassword(null);
       // localStorage.setItem("password",password);
@@ -30,8 +31,13 @@ function Unlock({ unlocker }) {
       height={"80%"}
       justify={"space-between"}
     >
-      <Img height={20} borderRadius={"50%"} src={"./logo.PNG"} />
-      {/* https://images.g2crowd.com/uploads/product/image/large_detail/large_detail_cc75b4289277b1c28eafa1a8f776a8c0/atomic-wallet.png */}
+      <VStack spacing={5}>
+        <Img height={20} borderRadius={"50%"} src={"./logo.PNG"} />
+        {/* https://images.g2crowd.com/uploads/product/image/large_detail/large_detail_cc75b4289277b1c28eafa1a8f776a8c0/atomic-wallet.png */}
+
+        <Heading fontSize={"24px"}>Trust-Less, Control-More</Heading>
+      </VStack>
+
       <VStack spacing={10}>
         <Input
           width={"100%"}
