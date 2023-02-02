@@ -41,7 +41,7 @@ const SeedPhraseManager = () => {
   };
 
   function CopyHandler() {
-    copy(seedPhrase);
+    // copy(seedPhrase);
     setCopied(true);
     location.reload();
     localStorage.setItem("seedPhrase", seedPhrase);

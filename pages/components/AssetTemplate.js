@@ -1,33 +1,27 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import Web3 from "web3";
+import { getWeb3 } from "../api/Transaction";
 function AssetTemplate(props) {
-  //   console.log("asset is", props);
   let userAddress = props?.userAddress;
   let assetName = props?.asset.name;
+  let chain = props.chain;
   let smartContractAddress = props?.asset?.address;
-  let httpProviderUrl = props?.providerUrl;
-  let _provider = httpProviderUrl
-    ? new Web3.providers.HttpProvider(httpProviderUrl)
-    : null;
-  let web3 = _provider ? new Web3(_provider) : null;
-
-  const [balance, setBalance] = useState("fetching Balance");
-
-  if (!props.asset || !web3) {
-    return <></>;
-  }
-
+  const [balance, setBalance] = useState("fetching Balance..");
   async function getBalance() {
-    if (!userAddress) return;
+    if (!userAddress) return 0;
+    let web3 = await getWeb3(chain);
+
+    if (!web3) return 0;
     var contract = new web3.eth.Contract(ERC20ABI, smartContractAddress);
     let _bal = await contract.methods.balanceOf(userAddress).call();
     _bal = parseInt(parseInt(_bal) / 10 ** 18);
     setBalance(_bal);
+    return _bal;
   }
   useEffect(() => {
     getBalance();
-  }, []);
+  }, [props]);
 
   return (
     <HStack

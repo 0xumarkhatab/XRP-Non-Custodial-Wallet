@@ -6,6 +6,7 @@ function TransactionInstance({ asset, onClick }) {
   if (!asset) return <></>;
   return (
     <HStack
+      key={asset.toString()}
       width={"40vw"}
       borderRadius={"20px"}
       bg={"white"}
