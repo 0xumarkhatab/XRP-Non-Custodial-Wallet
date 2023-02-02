@@ -2,7 +2,7 @@ import { Box, Button, HStack, Img, Text, VStack } from "@chakra-ui/react";
 import React from "react";
 import { getMinimalAddress } from "./AccountInstance";
 
-function TransactionInstance({ asset }) {
+function TransactionInstance({ asset, onClick }) {
   if (!asset) return <></>;
   return (
     <HStack
@@ -31,7 +31,9 @@ function TransactionInstance({ asset }) {
         </HStack>
         <Text fontWeight={"700"}>{getMinimalAddress(asset.to)}</Text>
       </VStack>
-      <Button colorScheme={"cyan"}>View Details</Button>
+      <Button onClick={onClick} colorScheme={"cyan"}>
+        View Details
+      </Button>
     </HStack>
   );
 }

@@ -6,9 +6,9 @@ function AssetTemplate(props) {
   let userAddress = props?.userAddress;
   let assetName = props?.asset.name;
   let smartContractAddress = props?.asset?.address;
-  let websocketUrl = props?.providerUrl;
-  let _provider = websocketUrl
-    ? new Web3.providers.WebsocketProvider(websocketUrl)
+  let httpProviderUrl = props?.providerUrl;
+  let _provider = httpProviderUrl
+    ? new Web3.providers.HttpProvider(httpProviderUrl)
     : null;
   let web3 = _provider ? new Web3(_provider) : null;
 
@@ -46,7 +46,9 @@ function AssetTemplate(props) {
 
       <Text>{balance}</Text>
 
-      <Button colorScheme={"cyan"}>View Details</Button>
+      <Button onClick={props?.onClick} colorScheme={"cyan"}>
+        View Details
+      </Button>
     </HStack>
   );
 }

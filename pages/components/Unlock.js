@@ -1,20 +1,54 @@
-import { Box, Button, Heading, Img, Input, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Heading,
+  Img,
+  Input,
+  useToast,
+  VStack,
+} from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 
 function Unlock({ unlocker }) {
   const [password, setPassword] = useState("");
   const [confirmingPassword, setConfirmingPassword] = useState(null);
   const [originalPassword, setOriginalPassword] = useState(null);
+  const toast = useToast();
+  function Toast(message) {
+    toast({
+      title: message.title,
+      description: message.description,
+      status: message.type,
+      duration: 2000,
+      isClosable: true,
+    });
+  }
 
   async function unlock() {
     if (!originalPassword && password != confirmingPassword) {
-      alert("Passwords does not match");
+      Toast({
+        title: `Authentication Error`,
+        description: `Passwords do not match!`,
+        type: "error",
+      });
+
       return 0;
     } else if (password === originalPassword || !originalPassword) {
       if (!originalPassword) localStorage.setItem("password", password);
+      Toast({
+        title: `Authentication Success`,
+        description: `You are Authenticated`,
+        type: "success",
+      });
+
       unlocker(true);
     } else {
-      alert("Invalid Password");
+      Toast({
+        title: `Authentication Error`,
+        description: `Password is incorrect`,
+        type: "error",
+      });
+
       return 0;
     }
   }

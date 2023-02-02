@@ -12,6 +12,8 @@ import {
   Tab,
   TabPanel,
   Input,
+  Spinner,
+  useToast,
 } from "@chakra-ui/react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
@@ -26,6 +28,12 @@ import { Alchemy, Network } from "alchemy-sdk";
 import TransactionInstance from "./TransactionInstance";
 
 import AssetTemplate from "./AssetTemplate";
+
+function capitalize(str) {
+  let _str = String(str);
+  _str = _str.toUpperCase()[0] + _str.slice(1);
+  return _str;
+}
 
 // funtction to get Transactions of an address on a 'network' chain
 
@@ -142,8 +150,8 @@ let chains = [
 ];
 
 let providers = {
-  goerli: "wss://goerli.infura.io/ws/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
-  mainnet: "wss://mainnet.infura.io/ws/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
+  goerli: "https://goerli.infura.io/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
+  mainnet: "https://mainnet.infura.io/v3/685daa6fa7f94b4b89cdc6d7c5a8639e",
 };
 
 let Assets = [];
@@ -182,8 +190,8 @@ let currencyOf = {
 
 // Data portion ends here !
 
-let websocketUrl = providers[chains[0].name];
-let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
+let httpProviderUrl = providers[chains[0].name];
+let _provider = new Web3.providers.HttpProvider(httpProviderUrl);
 let _web3 = new Web3(_provider);
 
 function AccountManager({ mnemonic }) {
@@ -194,7 +202,7 @@ function AccountManager({ mnemonic }) {
   const [assets, setAssets] = useState(Assets);
   const [accounts, setAccounts] = useState([]);
   const [buyIntent, setBuyIntent] = useState(false);
-  const [sellIntent, setSellIntent] = useState(false);
+  const [sendIntent, setSendIntent] = useState(false);
   const [transferAmount, setTransferAmount] = useState(0);
   const [transferAddress, setTransferAddress] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState(null);
@@ -202,18 +210,22 @@ function AccountManager({ mnemonic }) {
   const [transactions, setTransactions] = useState([]);
 
   const web3 = useRef(null);
-
-  function capitalize(str) {
-    let _str = String(str);
-    _str = _str.toUpperCase()[0] + _str.slice(1);
-    return _str;
+  const toast = useToast();
+  function Toast(message) {
+    toast({
+      title: message.title,
+      description: message.description,
+      status: message.type,
+      duration: 2000,
+      isClosable: true,
+    });
   }
 
   async function checkBalance(address) {
     if (!address) return 0;
     if (!web3 || !web3.current) {
-      let websocketUrl = providers[selectedChain];
-      let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
+      let httpProviderUrl = providers[selectedChain];
+      let _provider = new Web3.providers.HttpProvider(httpProviderUrl);
       let _web3 = new Web3(_provider);
       web3.current = _web3;
     }
@@ -264,8 +276,8 @@ function AccountManager({ mnemonic }) {
     }
 
     loadingMessage == null && setLoadingMessage("Loading");
-    websocketUrl = providers[selectedChain];
-    _provider = new Web3.providers.WebsocketProvider(websocketUrl);
+    httpProviderUrl = providers[selectedChain];
+    _provider = new Web3.providers.HttpProvider(httpProviderUrl);
     _web3 = new Web3(_provider);
     web3.current = _web3;
     // fetching latest transactions of selected account
@@ -303,7 +315,9 @@ function AccountManager({ mnemonic }) {
     );
   }
   async function signTransaction() {
-    await _signTransaction(selectedAccount.privateKey);
+    setSendIntent(false);
+    setTransactionObject(null);
+    _signTransaction(selectedAccount.privateKey);
   }
   async function _signTransaction(privKey) {
     const signedTransaction = await web3.current.eth.accounts.signTransaction(
@@ -317,29 +331,45 @@ function AccountManager({ mnemonic }) {
 
   // Function to broadcast the signed transaction
   async function broadcastTransaction(signedTransaction) {
-    setLoadingMessage("Transaction Initiated...");
+    Toast({
+      title: `Transaction initiated`,
+      description: `Broadcasting it now !`,
+      type: "info",
+    });
+
     web3.current.eth
       .sendSignedTransaction(signedTransaction.rawTransaction)
       .once("transactionHash", (txHash) => {
         console.log(txHash);
-        setLoadingMessage(
-          `Transaction broadcasted\nWating for confirmation...`
-        );
+        Toast({
+          title: `Transaction Broadcast`,
+          description: `Wating for confirmation...`,
+          type: "info",
+        });
       })
       .on("confirmation", (confirmationNumber, receipt) => {
-        setLoadingMessage(
-          `Transaction confirmed by ${confirmationNumber}/12 block(s)`
-        );
+        if (confirmationNumber <= 12)
+          Toast({
+            title: `Funds Transfer Progress`,
+            description: `Transaction confirmed by ${confirmationNumber}/12 block(s)`,
+            type: "info",
+          });
 
         if (confirmationNumber == 12) {
-          setLoadingMessage(
+          Toast({
+            title: `Funds Transferred`,
+            description: `Funds transferred successfully, block number: ${receipt.blockNumber}`,
+            type: "success",
+          });
+
+          Toast(
             `Funds transferred successfully, block number: ${receipt.blockNumber}`
           );
 
           setTimeout(() => {
             setLoadingMessage(null);
             setTransactionObject(null);
-            setSellIntent(false);
+            setSendIntent(false);
           }, 1000);
           updateAssets();
           console.log(
@@ -350,7 +380,11 @@ function AccountManager({ mnemonic }) {
         }
       })
       .on("error", (error) => {
-        setLoadingMessage(`Transaction failed: ${error}`);
+        Toast({
+          title: `Transaction failed`,
+          description: error,
+          type: "error",
+        });
       });
   }
 
@@ -360,8 +394,14 @@ function AccountManager({ mnemonic }) {
   }, [selectedChain]);
 
   useEffect(() => {
+    setLoadingMessage("Setting up ");
     generateAccounts(mnemonic);
   }, []);
+  useEffect(() => {
+    if (selectedChain && selectedAccount) {
+      loadingMessage != null && setLoadingMessage(null);
+    }
+  }, [selectedAccount, selectedChain]);
 
   useEffect(() => {
     if (!selectedAccount || !selectedAccount.address) return;
@@ -393,6 +433,7 @@ function AccountManager({ mnemonic }) {
                 borderRadius: "20px",
               }}
               onChange={async (e) => {
+                setLoadingMessage("Switching to " + capitalize(e.target.value));
                 setSelectedChain(e.target.value);
               }}
               placeholder={capitalize(selectedChain)}
@@ -445,8 +486,10 @@ function AccountManager({ mnemonic }) {
                         <AccountInstance
                           selector={async (account) => {
                             setShowAccounts(false);
-                            setLoadingMessage("Loading...");
+                            setLoadingMessage("Switching Account");
                             let balance = await checkBalance(account.address);
+                            setLoadingMessage("Getting account details");
+
                             setSelectedAccount({ ...account, balance });
                             setTimeout(() => {
                               setLoadingMessage(null);
@@ -473,15 +516,28 @@ function AccountManager({ mnemonic }) {
       </>
 
       {loadingMessage != null ? (
-        <VStack align={"center"} width={"100%"} height={"100%"}>
+        <VStack align={"center"} width={"50vw"} height={"80vw"} spacing={10}>
+          <Spinner
+            thickness="5px"
+            speed="0.5s"
+            emptyColor="gray.200"
+            color="green.500"
+            size="xl"
+          />
           <Heading>{loadingMessage}</Heading>
         </VStack>
       ) : (
         <>
           <HStack width={"40vw"} justify={"space-between"}>
             <HStack
-              onClick={() => setIsConnected((prev) => !prev)}
-              disabled
+              onClick={() => {
+                setIsConnected((prev) => !prev);
+                Toast({
+                  title: !isConnected ? `Connected` : "Disconnected",
+                  description: `Current website is connected to the wallet`,
+                  type: !isConnected ? "success" : "error",
+                });
+              }}
               cursor={"pointer"}
               padding={"10px"}
               borderRadius={"20px"}
@@ -562,12 +618,12 @@ function AccountManager({ mnemonic }) {
               <Button
                 colorScheme={"blue"}
                 onClick={() => {
-                  setSellIntent(true);
+                  setSendIntent(true);
                 }}
               >
                 Send
               </Button>
-              {sellIntent && transactionObject == null && (
+              {sendIntent && transactionObject == null && (
                 <ModalWrapper>
                   <VStack
                     height={"75vh"}
@@ -602,7 +658,7 @@ function AccountManager({ mnemonic }) {
                       <Button
                         colorScheme={"red"}
                         onClick={() => {
-                          setSellIntent(false);
+                          setSendIntent(false);
                         }}
                       >
                         Close
@@ -678,6 +734,13 @@ function AccountManager({ mnemonic }) {
                       tokens[selectedChain]?.map((item) => {
                         return (
                           <AssetTemplate
+                            onClick={() => {
+                              Toast({
+                                title: `Under Development`,
+                                description: `We are working on it.\nIt will be ready soon.\nThank you for trying out`,
+                                type: "info",
+                              });
+                            }}
                             key={item.address}
                             asset={item}
                             providerUrl={providers[selectedChain]}
@@ -685,14 +748,6 @@ function AccountManager({ mnemonic }) {
                               selectedAccount ? selectedAccount.address : null
                             }
                           />
-                          // <AssetInstance
-                          //   key={item.name}
-                          //   smartContract={item}
-                          //   providerUrl={providers[selectedChain]}
-                          //   userAddress={
-                          //     selectedAccount ? selectedAccount.address : null
-                          //   }
-                          // />
                         );
                       })}
                   </VStack>
@@ -710,6 +765,13 @@ function AccountManager({ mnemonic }) {
                           {transactions.map((asset) => {
                             return (
                               <TransactionInstance
+                                onClick={() => {
+                                  Toast({
+                                    title: `Under Development`,
+                                    description: `We are working on it.\nIt will be ready soon.\nThank you for trying out`,
+                                    type: "info",
+                                  });
+                                }}
                                 key={asset.asset}
                                 asset={asset}
                               />
