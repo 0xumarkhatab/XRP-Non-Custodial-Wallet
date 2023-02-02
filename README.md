@@ -1,5 +1,16 @@
 # Non Custodial Wallet
 
-![image](https://user-images.githubusercontent.com/71306738/215312878-7830cb2a-a6c2-43de-b968-cb945a34ae6e.png)
+![Dashboard](./illustration/goerliDashboard.PNG)
+This is a Non-Custodial Ethereum wallet like metamask supporting two chains for now.
+
+The Chains are 
+
+
+- Ethereum Mainnet 
+- Ethereum Goerli
+
+
+We Currently support 15 Mainnet Tokens . The Goal is to support 50+ assets.
+
 
 Details to be added
