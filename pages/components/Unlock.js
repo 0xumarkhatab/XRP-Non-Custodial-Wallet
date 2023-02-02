@@ -3,19 +3,23 @@ import React, { useEffect, useState } from "react";
 
 function Unlock({ unlocker }) {
   const [password, setPassword] = useState("");
+  const [confirmingPassword, setConfirmingPassword] = useState(null);
   const [originalPassword, setOriginalPassword] = useState(null);
 
   async function unlock() {
-    if (password === originalPassword || !originalPassword) {
+    if (!originalPassword && password != confirmingPassword) {
+      alert("Passwords does not match");
+      return 0;
+    } else if (password === originalPassword || !originalPassword) {
       if (!originalPassword) localStorage.setItem("password", password);
       unlocker(true);
     } else {
       alert("Invalid Password");
+      return 0;
     }
   }
   useEffect(() => {
     let _pass = localStorage.getItem("password");
-    console.log("original password is ", { _pass });
     if (!_pass || _pass == "null") {
       setOriginalPassword(null);
       // localStorage.setItem("password",password);
@@ -47,6 +51,17 @@ function Unlock({ unlocker }) {
           type={"text"}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {!originalPassword && (
+          <Input
+            width={"100%"}
+            border={"1px solid grey"}
+            colorScheme={"blue"}
+            placeholder={"Confirm your Password"}
+            type={"text"}
+            onChange={(e) => setConfirmingPassword(e.target.value)}
+          />
+        )}
+
         <Button onClick={unlock} colorScheme={"blue"}>
           Unlock
         </Button>

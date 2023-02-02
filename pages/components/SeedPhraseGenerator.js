@@ -5,6 +5,7 @@ import {
   FormLabel,
   Heading,
   HStack,
+  Img,
   Input,
   Modal,
   Text,
@@ -18,6 +19,7 @@ import * as bip39 from "@scure/bip39";
 
 import { wordlist } from "@scure/bip39/wordlists/english";
 import copy from "copy-to-clipboard";
+import Link from "next/link";
 
 const SeedPhraseManager = () => {
   const [seedPhrase, setSeedPhrase] = useState("");
@@ -98,17 +100,28 @@ const SeedPhraseManager = () => {
       ) : (
         <>
           {!showImportModal && (
-            <HStack>
-              <Button
-                colorScheme={"blue"}
-                onClick={() => !showImportModal && setShowImportModal(true)}
-              >
-                + Import Wallet
-              </Button>
-              <Button colorScheme={"blue"} onClick={handleNewSeedPhrase}>
-                Create New Wallet
-              </Button>
-            </HStack>
+            <VStack spacing={40}>
+              <Link href={"#"}>
+                <Img
+                  height={"100px"}
+                  width={"100px"}
+                  borderRadius={"50%"}
+                  src={"./logo.PNG"}
+                />
+              </Link>
+
+              <HStack>
+                <Button
+                  colorScheme={"blue"}
+                  onClick={() => !showImportModal && setShowImportModal(true)}
+                >
+                  + Import Wallet
+                </Button>
+                <Button colorScheme={"blue"} onClick={handleNewSeedPhrase}>
+                  Create New Wallet
+                </Button>
+              </HStack>
+            </VStack>
           )}
         </>
       )}

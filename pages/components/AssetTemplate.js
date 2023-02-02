@@ -22,7 +22,7 @@ function AssetTemplate(props) {
     if (!userAddress) return;
     var contract = new web3.eth.Contract(ERC20ABI, smartContractAddress);
     let _bal = await contract.methods.balanceOf(userAddress).call();
-    _bal = parseInt((parseInt(_bal) / 10) ^ 18);
+    _bal = parseInt(parseInt(_bal) / 10 ** 18);
     setBalance(_bal);
   }
   useEffect(() => {
@@ -31,7 +31,7 @@ function AssetTemplate(props) {
 
   return (
     <HStack
-      key={assetName}
+      key={"asset" + smartContractAddress}
       width={"40vw"}
       borderRadius={"20px"}
       bg={"white"}

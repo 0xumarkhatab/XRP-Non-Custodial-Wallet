@@ -1,11 +1,9 @@
 import {
   Box,
   Button,
-  Center,
   Heading,
   HStack,
   Img,
-  Select,
   Text,
   VStack,
   Tabs,
@@ -23,13 +21,14 @@ import * as bip39 from "@scure/bip39";
 import { hdkey } from "ethereumjs-wallet";
 import ModalWrapper from "./ModalWrapper";
 import PaymentMethodInstance from "./PaymentMethodInstance";
-import Head from "next/head";
 import { parseEther } from "ethers/lib/utils";
-import axios from "axios";
 import { Alchemy, Network } from "alchemy-sdk";
 import TransactionInstance from "./TransactionInstance";
-import AssetInstance from "./AssetInstance";
+
 import AssetTemplate from "./AssetTemplate";
+
+// funtction to get Transactions of an address on a 'network' chain
+
 async function getTransactions(network, address, setter) {
   const config = alchemyApps[network];
   console.log({ config });
@@ -47,11 +46,14 @@ async function getTransactions(network, address, setter) {
   });
   let arr = [...to_trxs.transfers];
   arr.concat({ ...from_trxs.transfers });
+  arr.reverse();
   if (setter) setter(arr);
   // console.log("transactions are ", arr);
 
   return arr;
 }
+
+// Data portion starts here
 
 let tokens = {
   mainnet: [
@@ -99,14 +101,16 @@ let tokens = {
       address: "0x3883f5e181fccaF8410FA61e12b59BAd963fb645",
     },
   ],
+
   goerli: [
-    {
-      name: "WETH",
-      address: "0x695364ffAA20F205e337f9e6226e5e22525838d9",
-    },
     {
       name: "WBTC",
       address: "0xD8c4F6e84D6f6A0D39d25a3F42F15351303a6Af5",
+    },
+
+    {
+      name: "WETH",
+      address: "0x695364ffAA20F205e337f9e6226e5e22525838d9",
     },
     {
       name: "USDC",
@@ -175,6 +179,9 @@ let currencyOf = {
   goerli: "ETH",
   mainnet: "ETH",
 };
+
+// Data portion ends here !
+
 let websocketUrl = providers[chains[0].name];
 let _provider = new Web3.providers.WebsocketProvider(websocketUrl);
 let _web3 = new Web3(_provider);
@@ -212,15 +219,10 @@ function AccountManager({ mnemonic }) {
     }
     let balance = await web3.current?.eth.getBalance(address);
     if (balance == undefined) return 0;
-    console.log("balance directly from blockchain", balance);
-
     balance = parseFloat(parseInt(balance) / 10 ** 18).toFixed(4);
-
     if (balance.toString() === "0.0000") {
       balance = 0;
     }
-    console.log({ address, balance });
-
     return balance;
   }
 
@@ -242,8 +244,7 @@ function AccountManager({ mnemonic }) {
       let balance = await checkBalance(_address);
       let _accountsObject = {
         name: "Account " + (i + 1),
-        avatar:
-          "https://user-images.githubusercontent.com/17594777/87848893-9bc99700-c8e4-11ea-992d-8980cf562b1b.png",
+        avatar: "./account.png",
         balance,
         address: _address,
         privateKey: privKey,
@@ -253,17 +254,15 @@ function AccountManager({ mnemonic }) {
     // console.log("setting first account");
 
     setSelectedAccount(_accounts[0]);
-
     setAccounts(_accounts);
     return _accounts;
   };
 
   async function updateAssets() {
-    // console.log("entring ");
     if (!selectedAccount || !selectedChain) {
       return 0;
     }
-    // console.log("inside");
+
     loadingMessage == null && setLoadingMessage("Loading");
     websocketUrl = providers[selectedChain];
     _provider = new Web3.providers.WebsocketProvider(websocketUrl);
@@ -279,7 +278,6 @@ function AccountManager({ mnemonic }) {
     // fetching balance of the user
     let balance = await checkBalance(selectedAccount.address);
     setSelectedAccount({ ...selectedAccount, balance });
-
     setTimeout(() => {
       setLoadingMessage(null);
     }, 1000);
@@ -369,12 +367,6 @@ function AccountManager({ mnemonic }) {
     if (!selectedAccount || !selectedAccount.address) return;
     getTransactions(selectedChain, selectedAccount.address, setTransactions);
   }, [selectedAccount]);
-  // console.log({
-  //   tokens: tokens[selectedChain],
-  //   selectedAccount,
-  //   web3,
-  //   web3Current: web3.current,
-  // });
 
   return (
     <VStack spacing={5}>
@@ -432,7 +424,6 @@ function AccountManager({ mnemonic }) {
               <Img
                 height={8}
                 src={selectedAccount?.avatar}
-                alt="account image"
                 borderRadius={"50%"}
               />
             </Button>
@@ -525,17 +516,12 @@ function AccountManager({ mnemonic }) {
                 borderRadius={"50%"}
                 height={8}
                 src="http://cdn.onlinewebfonts.com/svg/img_549109.png"
-                alt="menu"
               />
             </Button>
           </HStack>
 
           <VStack spacing={10}>
-            <Img
-              height={8}
-              src={selectedAccount?.avatar}
-              alt={"account__avatar"}
-            />
+            <Img height={8} src={selectedAccount?.avatar} />
             <Heading>{selectedAccount?.balance} ETH</Heading>
             <HStack>
               <Button colorScheme={"blue"} onClick={() => setBuyIntent(true)}>
@@ -692,6 +678,7 @@ function AccountManager({ mnemonic }) {
                       tokens[selectedChain]?.map((item) => {
                         return (
                           <AssetTemplate
+                            key={item.address}
                             asset={item}
                             providerUrl={providers[selectedChain]}
                             userAddress={
