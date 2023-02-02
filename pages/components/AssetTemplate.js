@@ -4,8 +4,8 @@ import Web3 from "web3";
 import { getWeb3 } from "../api/Transaction";
 function AssetTemplate(props) {
   let userAddress = props?.userAddress;
-  let assetName = props?.asset.name;
-  let chain = props.chain;
+  let assetName = props?.asset?.name;
+  let chain = props?.chain;
   let smartContractAddress = props?.asset?.address;
   const [balance, setBalance] = useState("fetching Balance..");
   async function getBalance() {
