@@ -114,8 +114,8 @@ const SeedPhraseManager = () => {
             <VStack spacing={40}>
               <Link href={"#"}>
                 <Img
-                  height={"100px"}
-                  width={"100px"}
+                  width={"20vw"}
+
                   borderRadius={"50%"}
                   src={"./logo.PNG"}
                 />
