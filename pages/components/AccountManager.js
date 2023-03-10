@@ -105,7 +105,7 @@ function AccountManager({ mnemonic, masterAddress }) {
 
   const generateAccounts = async (_seedPhrase, _masterAddress, _client) => {
 
-    setLoadingMessage("Gathering accounts...");
+    // setLoadingMessage("Gathering accounts...");
     let XrplClient = _client || xrplClient;
 
     let test_wallet = xrpl.Wallet.fromSeed(_seedPhrase, {
@@ -132,7 +132,7 @@ function AccountManager({ mnemonic, masterAddress }) {
     setSelectedAccount(accountsArray[0]);
     setAccounts(accountsArray);
     console.log("_");
-    setLoadingMessage(null);
+    // setLoadingMessage(null);
 
 
     return accountsArray;
@@ -147,20 +147,6 @@ function AccountManager({ mnemonic, masterAddress }) {
     setSelectedAccount(updatedAccount);
     setLoadingMessage(null)
 
-    // if (!selectedAccount || !selectedChain) {
-    //   return 0;
-    // }
-
-    // loadingMessage == null && setLoadingMessage("Loading");
-    // web3.current = await getWeb3(selectedChain);
-    // // fetching latest transactions of selected account
-    // let trxs = await getTransactions(
-    //   selectedChain,
-    //   selectedAccount.address,
-    //   setTransactions
-    // );
-
-    // fetching balance of the user
 
   }
 
@@ -217,7 +203,7 @@ function AccountManager({ mnemonic, masterAddress }) {
   }, [selectedChain]);
 
   async function init() {
-    let res = await connectXRPL(setXRPLClient);
+    let res = await connectXRPL(setXRPLClient,selectedChain);
     await generateAccounts(mnemonic, masterAddress, res);
 
   }
@@ -226,12 +212,27 @@ function AccountManager({ mnemonic, masterAddress }) {
     init();
 
   }, []);
+  
+  async function updateAccountBalance(){
+    if(!selectedAccount) return 0;
+  
+    let xrlpClient=await connectXRPL(setXRPLClient,selectedChain);
+    let bal=await checkBalance(selectedAccount.wallet.address,xrlpClient);
+    let acc={...selectedAccount};
+    acc.wallet.balance=bal;
+    setSelectedAccount(acc);
+
+  }
 
   useEffect(() => {
+    updateAccountBalance();    
+  
     if (transactions?.length > 0) {
       loadingMessage != null && setLoadingMessage(null);
     }
-  }, [selectedAccount, selectedChain]);
+
+  }, [ selectedChain]);
+
 
   useEffect(() => {
     if (!selectedAccount || !selectedAccount.address) return;
@@ -277,6 +278,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                     }}
                     key={"chain" + chain.name}
                     value={chain.name}
+                    
                   >
                     {capitalize(chain.name)}
                   </option>

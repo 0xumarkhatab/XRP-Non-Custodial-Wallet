@@ -94,8 +94,9 @@ export let chains = [
 ];
 
 export let testnetProviders = {
-  testnet: "https://testnet.infura.io/v3/e3562069a1d44d18aa58a3ea55ccf21a",
-  mainnet: "https://mainnet.infura.io/v3/e3562069a1d44d18aa58a3ea55ccf21a",
+  testnet: "wss://s.altnet.rippletest.net:51233",
+  mainnet: "wss://xrplcluster.com/",
+  devnet:"wss://s.altnet.rippletest.net:51233"
 };
 
 export let buyMethods = [
