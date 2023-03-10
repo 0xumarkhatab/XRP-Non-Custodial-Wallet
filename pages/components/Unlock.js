@@ -64,23 +64,24 @@ function Unlock({ unlocker }) {
 
   return (
     <VStack
-      paddingTop={"20vh"}
+    paddingTop={"20vh"}
       width={"100%"}
       height={"80%"}
-      justify={"space-between"}
+      spacing={10}
+
     >
       <VStack spacing={5}>
-        <Img height={20} borderRadius={"50%"} src={"./logo.PNG"} />
+        <Img width={"20vw"}  src={"./logo.PNG"} />
         {/* https://images.g2crowd.com/uploads/product/image/large_detail/large_detail_cc75b4289277b1c28eafa1a8f776a8c0/atomic-wallet.png */}
 
-        <Heading fontSize={"24px"}>Trust-Less, Control-More</Heading>
+        <Heading fontSize={"24px"}>Secure. Simple. XRP.</Heading>
       </VStack>
 
       <VStack spacing={10}>
         <Input
           width={"100%"}
           border={"1px solid grey"}
-          colorScheme={"blue"}
+          colorScheme={"cyan"}
           placeholder={(!originalPassword ? "Create a new " : "") + "Password"}
           type={"text"}
           onChange={(e) => setPassword(e.target.value)}
@@ -89,14 +90,14 @@ function Unlock({ unlocker }) {
           <Input
             width={"100%"}
             border={"1px solid grey"}
-            colorScheme={"blue"}
+            colorScheme={"cyan"}
             placeholder={"Confirm your Password"}
             type={"text"}
             onChange={(e) => setConfirmingPassword(e.target.value)}
           />
         )}
 
-        <Button onClick={unlock} colorScheme={"blue"}>
+        <Button onClick={unlock} colorScheme={"cyan"}>
           Unlock
         </Button>
       </VStack>

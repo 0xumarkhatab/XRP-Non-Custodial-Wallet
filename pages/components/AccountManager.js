@@ -235,10 +235,9 @@ function AccountManager({ mnemonic, masterAddress }) {
       <>
         <HStack width={"40vw"} justify={"space-between"}>
           {/* Wallet logo */}
-          <Link href={"#"}>
+          <Link href={"/"}>
             <Img
-              height={"50px"}
-              width={"50px"}
+              width={"10vw"}
               borderRadius={"50%"}
               src={"./logo.PNG"}
             />
@@ -342,7 +341,7 @@ function AccountManager({ mnemonic, masterAddress }) {
             thickness="5px"
             speed="0.5s"
             emptyColor="gray.200"
-            color="green.500"
+            color="cyan.700"
             size="xl"
           />
           <Heading>{loadingMessage}</Heading>
@@ -401,7 +400,7 @@ function AccountManager({ mnemonic, masterAddress }) {
             <Img height={8} src={selectedAccount?.avatar} />
             <Heading>{selectedAccount?.wallet.balance} XRP</Heading>
             <HStack>
-              <Button colorScheme={"blue"} onClick={() => setBuyIntent(true)}>
+              <Button colorScheme={"cyan"} onClick={() => setBuyIntent(true)}>
                 Buy
               </Button>
               {buyIntent && (
@@ -437,7 +436,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                 </ModalWrapper>
               )}
               <Button
-                colorScheme={"blue"}
+                colorScheme={"cyan"}
                 onClick={() => {
                   setSendIntent(true);
                 }}
@@ -484,7 +483,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                       >
                         Close
                       </Button>
-                      <Button colorScheme={"blue"} onClick={transferMoney}>
+                      <Button colorScheme={"cyan"} onClick={transferMoney}>
                         Send
                       </Button>
                     </HStack>
@@ -531,7 +530,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                       >
                         Reject
                       </Button>
-                      <Button colorScheme={"blue"} onClick={signTransaction}>
+                      <Button colorScheme={"cyan"} onClick={signTransaction}>
                         Accept
                       </Button>
                     </HStack>
@@ -539,7 +538,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                 </ModalWrapper>
               )}
 
-              <Button onClick={underDevelopmentToast} colorScheme={"blue"}>
+              <Button onClick={underDevelopmentToast} colorScheme={"cyan"}>
                 Swap
               </Button>
             </HStack>
