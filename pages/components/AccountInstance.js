@@ -53,20 +53,20 @@ function AccountInstance({
         <Img
           height={size == "sm" ? "40px" : "60px"}
           borderRadius={"50%"}
-          src={"./logo.PNG"}
+          src={account.avatar}
         />
       )}
 
       <VStack>
         <Heading
           fontSize={size == "sm" ? "12px" : "20px"}
-          color={color ? color : "black"}
+          color={color ? color : "white"}
         >
           {account.name}
         </Heading>
         <Text
           fontSize={size == "sm" ? "14px" : "18px"}
-          color={color ? color : "black"}
+          color={color ? color : "white"}
         >
           {getMinimalAddress(wallet.classicAddress)}
         </Text>

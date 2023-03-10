@@ -165,6 +165,15 @@ function AccountManager({ mnemonic, masterAddress }) {
   }
 
   async function transferMoney() {
+    if(!transferAmount || !transferAddress){
+      Toast({
+        title: "Invalid Transfer",
+        description: `Kindly fill the fields`,
+        type:  "error",
+      });
+      return 0;
+      
+    }
     await prepareTransaction(xrplClient, selectedAccount.wallet, transferAddress,
       (transferAmount.toString()),
       selectedChain,
@@ -296,7 +305,8 @@ function AccountManager({ mnemonic, masterAddress }) {
                     height={"75vh"}
                     position={"absolute"}
                     zIndex={2}
-                    bg={"white"}
+                    bg={"black"}
+                    boxShadow={"1px 1px 1px 1px rgba(0,0,0,0.4)"}
                     width={"40vw"}
                     borderRadius={"20px"}
                     paddingTop={"5vh"}
@@ -357,6 +367,7 @@ function AccountManager({ mnemonic, masterAddress }) {
                   description: `Current website is connected to the wallet`,
                   type: !isConnected ? "success" : "error",
                 });
+
               }}
               cursor={"pointer"}
               padding={"10px"}
