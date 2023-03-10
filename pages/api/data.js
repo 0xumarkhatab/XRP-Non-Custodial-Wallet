@@ -47,7 +47,7 @@ export let tokens = {
     },
   ],
 
-  goerli: [
+  testnet: [
     {
       name: "WBTC",
       address: "0xD8c4F6e84D6f6A0D39d25a3F42F15351303a6Af5",
@@ -65,29 +65,36 @@ export let tokens = {
 };
 
 export let alchemyApps = {
-  goerli: {
+  testnet: {
     apiKey: "OINpsQZSN0z6VRLC1jL5YYrLmQiYGARE",
-    network: Network.ETH_GOERLI,
+    network: "testnet",
   },
 
   mainnet: {
     apiKey: "Ye6S888IuNTfAGGPQf2C_ZRvXJD9YQdQ",
-    network: Network.ETH_MAINNET,
+    network: "mainnet",
   },
 };
 export let chains = [
+  {
+    name: "testnet",
+    chain_id: 5,
+  },
+
   {
     name: "mainnet",
     chain_id: 1,
   },
   {
-    name: "goerli",
+    name: "devnet",
     chain_id: 5,
   },
+
+  ,
 ];
 
-export let GoerliProviders = {
-  goerli: "https://goerli.infura.io/v3/e3562069a1d44d18aa58a3ea55ccf21a",
+export let testnetProviders = {
+  testnet: "https://testnet.infura.io/v3/e3562069a1d44d18aa58a3ea55ccf21a",
   mainnet: "https://mainnet.infura.io/v3/e3562069a1d44d18aa58a3ea55ccf21a",
 };
 
@@ -119,6 +126,6 @@ export let buyMethods = [
   },
 ];
 export let currencyOf = {
-  goerli: "ETH",
-  mainnet: "ETH",
+  testnet: "XRP",
+  mainnet: "XRP",
 };

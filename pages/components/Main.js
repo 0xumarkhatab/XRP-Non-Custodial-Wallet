@@ -7,13 +7,20 @@ import Unlock from "./Unlock";
 function Main() {
   const [unlocked, setUnlocked] = useState(false);
   const [mnemonic, setMnemonic] = useState(null);
+  const [masterAddress,setMasterAddress]=useState(null);
+
   //   mnemonic = localStorage.getItem("mnemonic");
   useEffect(() => {
     let _mnemonic = localStorage.getItem("mnemonic");
+    let MasterAddress = localStorage.getItem("masterAddress");
+    
     if (_mnemonic && _mnemonic !== "null") {
-      console.log("mnemonic", _mnemonic);
       setMnemonic(_mnemonic);
+      setMasterAddress(MasterAddress);
+
     }
+
+
   }, []);
 
   return (
@@ -38,7 +45,7 @@ function Main() {
           <Unlock unlocker={setUnlocked} />
         ) : (
           <Box>
-            <AccountManager mnemonic={mnemonic} />
+            <AccountManager masterAddress={masterAddress} mnemonic={mnemonic} />
           </Box>
         )}
       </Box>

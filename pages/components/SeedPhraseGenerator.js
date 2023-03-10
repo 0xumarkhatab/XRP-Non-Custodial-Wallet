@@ -7,32 +7,36 @@ import {
   HStack,
   Img,
   Input,
-  Modal,
   Text,
-  useDisclosure,
   VStack,
   Wrap,
   WrapItem,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import * as bip39 from "@scure/bip39";
-
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { useEffect, useState } from "react";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
+import { connectXRPL } from "../api/xrplApi";
+const xrpl = require("xrpl")
+// In browsers, use a <script> tag. In Node.js, uncomment the following line:
+// const xrpl = require('xrpl')
+
 
 const SeedPhraseManager = () => {
   const [seedPhrase, setSeedPhrase] = useState("");
   const [copied, setCopied] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [loader, setLoader] = useState(false);
+  const [xrplClient,setXRPLClient]=useState(null);
+
 
   const handleNewSeedPhrase = () => {
-    const newSeedPhrase = bip39.generateMnemonic(wordlist);
-    // const newSeedPhrase =
-    //   " asd adsdasdaasdas d asd asd sa das d as das d asd sda sdasdasd asd";
-    setSeedPhrase(newSeedPhrase);
-    localStorage.setItem("seedPhrase", newSeedPhrase);
+    const test_wallet = xrpl.Wallet.generate()
+    const newSeed = test_wallet.seed;
+
+    setSeedPhrase(newSeed);
+    localStorage.setItem("seedPhrase", newSeed);
+    localStorage.setItem("masterAddress", test_wallet.publicKey);
+
   };
 
   const handleImportSeedPhrase = (e) => {
@@ -41,7 +45,7 @@ const SeedPhraseManager = () => {
   };
 
   function CopyHandler() {
-    // copy(seedPhrase);
+    copy(seedPhrase);
     setCopied(true);
     location.reload();
     localStorage.setItem("seedPhrase", seedPhrase);
@@ -55,6 +59,12 @@ const SeedPhraseManager = () => {
     localStorage.setItem("mnemonic", seedPhrase);
     location.reload();
   }
+
+  useEffect(() => {
+     connectXRPL(setXRPLClient);
+    
+
+  }, [])
   return (
     <VStack
       paddingTop={"20vh"}
@@ -76,7 +86,8 @@ const SeedPhraseManager = () => {
                         minW={"80px"}
                         padding={"10px"}
                         border={"1px solid grey"}
-                        borderRadius={"10px"}
+                        borderRadiu
+                        s={"10px"}
                       >
                         <Text>{word}</Text>
                       </Box>

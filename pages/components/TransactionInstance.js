@@ -19,7 +19,7 @@ function TransactionInstance({ asset, onClick }) {
       </Box>
 
       <VStack align={"left"}>
-        <Text fontWeight={"700"}> {getMinimalAddress(asset.from)}</Text>
+        <Text > {getMinimalAddress(asset.from)}</Text>
         <HStack justify={"center"} width={"15vw"} spacing={5}>
           <Img
             height={5}
@@ -30,7 +30,7 @@ function TransactionInstance({ asset, onClick }) {
             {asset.value ? asset.value : 0}
           </Text>
         </HStack>
-        <Text fontWeight={"700"}>{getMinimalAddress(asset.to)}</Text>
+        <Text >{getMinimalAddress(asset.to)}</Text>
       </VStack>
       <Button onClick={onClick} colorScheme={"cyan"}>
         View Details

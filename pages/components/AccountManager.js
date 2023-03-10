@@ -19,9 +19,6 @@ import {
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 import AccountInstance, { getMinimalAddress } from "./AccountInstance";
-import Web3 from "web3";
-import * as bip39 from "@scure/bip39";
-import { hdkey } from "ethereumjs-wallet";
 import ModalWrapper from "./ModalWrapper";
 import PaymentMethodInstance from "./PaymentMethodInstance";
 import { parseEther } from "ethers/lib/utils";
@@ -34,16 +31,19 @@ import {
   _signTransaction,
   _signTransactionAndBroadcast,
 } from "../api/Transaction";
-import { arrayToPrivateKey, capitalize } from "../api/Utilities";
+import { capitalize } from "../api/Utilities";
 import { buyMethods, chains, currencyOf, tokens } from "../api/data";
-import { providers } from "web3";
+import { connectXRPL } from "../api/xrplApi";
+const xrpl = require("xrpl")
+
 //
 
 //
 
 // funtction to get Transactions of an address on a 'network' chain
+let network = "testnet"; // "testnet","mainnet" or "devnet"
 
-function AccountManager({ mnemonic }) {
+function AccountManager({ mnemonic, masterAddress }) {
   const [selectedChain, setSelectedChain] = useState(chains[0].name);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [showAccounts, setShowAccounts] = useState(false);
@@ -56,6 +56,7 @@ function AccountManager({ mnemonic }) {
   const [loadingMessage, setLoadingMessage] = useState(null);
   const [transactionObject, setTransactionObject] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [xrplClient, setXRPLClient] = useState(null);
 
   const web3 = useRef(null);
   const toast = useToast();
@@ -76,72 +77,96 @@ function AccountManager({ mnemonic }) {
       type: "info",
     });
   }
-  async function checkBalance(address) {
+  async function checkBalance(address, client) {
     if (!address) return 0;
-    if (!web3 || !web3.current) {
-      web3.current = await getWeb3(selectedChain);
+    try {
+      let Client = client || xrplClient;
+      let res = await Client.request({
+        "command": "account_info",
+        "account": address,
+        "ledger_index": "validated"
+      })
+      let balance = res.result.account_data.Balance;
+      console.log("balance in drops", balance);
+
+
+      if (balance == undefined) return 0;
+      balance = parseFloat(parseInt(balance) / 10 ** 6).toFixed(2);
+      if (balance.toString() === "0.00") {
+        balance = 0;
+      }
+
+      return balance;
     }
-    let balance = await web3.current?.eth.getBalance(address);
-    if (balance == undefined) return 0;
-    balance = parseFloat(parseInt(balance) / 10 ** 18).toFixed(4);
-    if (balance.toString() === "0.0000") {
-      balance = 0;
+    catch (e) {
+      return 0;
     }
-    return balance;
   }
 
-  const generateAccounts = async (_seedPhrase) => {
-    // console.log("generating accounts");
-    const seed = bip39.mnemonicToSeedSync(_seedPhrase);
-    const hdwallet = hdkey.fromMasterSeed(seed);
-    const wallet_hdpath = "m/44'/60'/0'/0/";
-    let _accounts = [];
-    for (let i = 0; i < 3; i++) {
-      const wallet = hdwallet.derivePath(wallet_hdpath + i).getWallet();
-      const _address = "0x" + wallet.getAddress().toString("hex");
-      let privKey = arrayToPrivateKey(wallet.getPrivateKey());
-      let balance = await checkBalance(_address);
-      let _accountsObject = {
-        name: "Account " + (i + 1),
-        avatar: "./account.png",
-        balance,
-        address: _address,
-        privateKey: privKey,
-      };
-      _accounts.push(_accountsObject);
-    }
+  const generateAccounts = async (_seedPhrase, _masterAddress, _client) => {
 
-    setSelectedAccount(_accounts[0]);
-    setAccounts(_accounts);
-    return _accounts;
+    setLoadingMessage("Gathering accounts...");
+    let XrplClient = _client || xrplClient;
+
+    let test_wallet = xrpl.Wallet.fromSeed(_seedPhrase, {
+      masterAddress: _masterAddress
+    })
+
+    let balance = await checkBalance(test_wallet.address, XrplClient);
+    if (selectedChain != "mainnet" && balance == 0) {
+      console.log("Funding it....");
+      const fund_result = await XrplClient.fundWallet(test_wallet)
+
+    }
+    balance = await checkBalance(test_wallet.address, XrplClient);
+
+    test_wallet.balance = balance;
+    let _accountsObject = {
+      name: "Account1 ",
+      avatar: "./account.png",
+      wallet: test_wallet,
+    };
+    let accountsArray = [_accountsObject]
+
+
+    setSelectedAccount(accountsArray[0]);
+    setAccounts(accountsArray);
+    console.log("_");
+    setLoadingMessage(null);
+
+
+    return accountsArray;
   };
 
   async function updateAssets() {
-    if (!selectedAccount || !selectedChain) {
-      return 0;
-    }
+    if (!selectedAccount || !xrplClient) return 0;
+    setLoadingMessage("Updating balances...")
+    let balance = await checkBalance(selectedAccount?.wallet?.address, xrplClient);
+    let updatedAccount = { ...selectedAccount };
+    updatedAccount.wallet.balance = balance;
+    setSelectedAccount(updatedAccount);
+    setLoadingMessage(null)
 
-    loadingMessage == null && setLoadingMessage("Loading");
-    web3.current = await getWeb3(selectedChain);
-    // fetching latest transactions of selected account
-    let trxs = await getTransactions(
-      selectedChain,
-      selectedAccount.address,
-      setTransactions
-    );
+    // if (!selectedAccount || !selectedChain) {
+    //   return 0;
+    // }
+
+    // loadingMessage == null && setLoadingMessage("Loading");
+    // web3.current = await getWeb3(selectedChain);
+    // // fetching latest transactions of selected account
+    // let trxs = await getTransactions(
+    //   selectedChain,
+    //   selectedAccount.address,
+    //   setTransactions
+    // );
 
     // fetching balance of the user
-    let balance = await checkBalance(selectedAccount.address);
-    setSelectedAccount({ ...selectedAccount, balance });
-    setTimeout(() => {
-      setLoadingMessage(null);
-    }, 1000);
+
   }
 
   async function transferMoney() {
-    await prepareTransaction(
-      parseEther(transferAmount.toString()),
-      transferAddress,
+    await prepareTransaction(xrplClient, selectedAccount.wallet, transferAddress,
+      (transferAmount.toString()),
       selectedChain,
       setTransactionObject
     );
@@ -153,18 +178,27 @@ function AccountManager({ mnemonic }) {
 
     // signing transaction
     _signTransactionAndBroadcast(
-      transactionObject,
-      selectedAccount.privateKey,
+      transactionObject, xrplClient,
+      selectedAccount.wallet,
       selectedChain,
-      setTransactionObject,
       () => {
+        setTransactionObject(null);
         setTimeout(() => {
           setLoadingMessage(null);
         }, 1000);
+        let txs = transactions.length>0?transactions: []
+        txs.push({
+          asset: "XRP",
+          to: transferAddress,
+          value: transferAmount,
+          from: selectedAccount.wallet.address
+        })
+        setTransactions(txs)
         updateAssets();
       },
       Toast
     );
+
   }
 
   // use Effects
@@ -173,12 +207,19 @@ function AccountManager({ mnemonic }) {
     updateAssets();
   }, [selectedChain]);
 
+  async function init() {
+    let res = await connectXRPL(setXRPLClient);
+    await generateAccounts(mnemonic, masterAddress, res);
+
+  }
   useEffect(() => {
-    generateAccounts(mnemonic);
+
+    init();
+
   }, []);
 
   useEffect(() => {
-    if (transactions.length > 0) {
+    if (transactions?.length > 0) {
       loadingMessage != null && setLoadingMessage(null);
     }
   }, [selectedAccount, selectedChain]);
@@ -267,7 +308,7 @@ function AccountManager({ mnemonic }) {
                           selector={async (account) => {
                             setShowAccounts(false);
                             setLoadingMessage("Switching Account");
-                            let balance = await checkBalance(account.address);
+                            let balance = await checkBalance(account.address, xrplClient);
                             setLoadingMessage("Getting account details");
 
                             setSelectedAccount({ ...account, balance });
@@ -358,7 +399,7 @@ function AccountManager({ mnemonic }) {
 
           <VStack spacing={10}>
             <Img height={8} src={selectedAccount?.avatar} />
-            <Heading>{selectedAccount?.balance} ETH</Heading>
+            <Heading>{selectedAccount?.wallet.balance} XRP</Heading>
             <HStack>
               <Button colorScheme={"blue"} onClick={() => setBuyIntent(true)}>
                 Buy
@@ -468,7 +509,7 @@ function AccountManager({ mnemonic }) {
                     <Heading>Approve Transfer</Heading>
                     <HStack>
                       <Text> From : </Text>
-                      <Text>{getMinimalAddress(selectedAccount.address)}</Text>
+                      <Text>{getMinimalAddress(selectedAccount.wallet.address)}</Text>
                     </HStack>
                     <HStack>
                       <Text> To : </Text>
@@ -502,58 +543,28 @@ function AccountManager({ mnemonic }) {
                 Swap
               </Button>
             </HStack>
-            <Tabs>
-              <TabList width={"40vw"} justifyContent={"space-between"}>
-                <Tab>Assets</Tab>
-                <Tab>Transactions</Tab>
-              </TabList>
-
-              <TabPanels>
-                <TabPanel>
-                  <Heading>Your Assets</Heading>
-                  <VStack pt={"5vh"} spacing={10}>
-                    {tokens[selectedChain].length > 0 &&
-                      tokens[selectedChain].map((item) => {
-                        return (
-                          <AssetTemplate
-                            onClick={underDevelopmentToast}
-                            key={item.address + item.name}
-                            asset={item}
-                            chain={selectedChain}
-                            userAddress={
-                              selectedAccount ? selectedAccount.address : null
-                            }
-                          />
-                        );
-                      })}
+            <VStack spacing={10}>
+              <Heading>Recent Transactions</Heading>
+              {!transactions || transactions?.length == 0 ? (
+                <>
+                  <Text>No Recent Transactions</Text>
+                </>
+              ) : (
+                <>
+                  <VStack spacing={5}>
+                    {transactions?.map((asset) => {
+                      return (
+                        <TransactionInstance
+                          onClick={underDevelopmentToast}
+                          key={asset.toString()}
+                          asset={asset}
+                        />
+                      );
+                    })}
                   </VStack>
-                </TabPanel>
-                <TabPanel>
-                  <VStack spacing={10}>
-                    <Heading>Recent Transactions</Heading>
-                    {transactions.length == 0 ? (
-                      <>
-                        <Text>No Recent Transactions</Text>
-                      </>
-                    ) : (
-                      <>
-                        <VStack spacing={5}>
-                          {transactions.map((asset) => {
-                            return (
-                              <TransactionInstance
-                                onClick={underDevelopmentToast}
-                                key={asset.toString()}
-                                asset={asset}
-                              />
-                            );
-                          })}
-                        </VStack>
-                      </>
-                    )}
-                  </VStack>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
+                </>
+              )}
+            </VStack>
           </VStack>
         </>
       )}

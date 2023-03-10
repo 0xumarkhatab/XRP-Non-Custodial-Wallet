@@ -1,7 +1,7 @@
 import { color, Heading, HStack, Img, Text, VStack } from "@chakra-ui/react";
 import copy from "copy-to-clipboard";
 import React, { useState } from "react";
-export function getMinimalAddress(_address, upperLimit = 36) {
+export function getMinimalAddress(_address, upperLimit = 26) {
   let minAddress =
     _address?.toString().slice(0, 8) +
     "..." +
@@ -20,13 +20,14 @@ function AccountInstance({
   const [showCopy, setShowCopy] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   if (!account) return <></>;
+  let wallet=account.wallet;
   return (
     <HStack
-      key={account?.address}
+      key={wallet.classicAddress}
       onClick={() => {
         if (!isCopied && copyable) {
           console.log("copying...");
-          copy(account.address);
+          copy(wallet.classicAddress);
           setIsCopied(true);
         }
         selector(account);
@@ -61,13 +62,13 @@ function AccountInstance({
           fontSize={size == "sm" ? "12px" : "20px"}
           color={color ? color : "black"}
         >
-          {account?.name}
+          {account.name}
         </Heading>
         <Text
           fontSize={size == "sm" ? "14px" : "18px"}
           color={color ? color : "black"}
         >
-          {getMinimalAddress(account?.address)}
+          {getMinimalAddress(wallet.classicAddress)}
         </Text>
       </VStack>
       {showCopy == true && (
